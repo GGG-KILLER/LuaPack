@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A5F65154-A864-44BB-8882-FA983066E2A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuaPack.Core", "src\Core\LuaPack.Core.csproj", "{CAD90912-A769-43DB-8E05-C05FB03F8745}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuaPack.CLI", "src\CLI\LuaPack.CLI.csproj", "{7A816168-9D32-4A1A-A336-6EBCCEDE2043}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{63B4CE3C-0001-40D2-BB07-94E3529D0379}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuaPack.Core.Tests", "test\Core\LuaPack.Core.Tests.csproj", "{44E7C375-D7FC-45AB-8A14-B52F3DC587AA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CAD90912-A769-43DB-8E05-C05FB03F8745}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAD90912-A769-43DB-8E05-C05FB03F8745}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAD90912-A769-43DB-8E05-C05FB03F8745}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAD90912-A769-43DB-8E05-C05FB03F8745}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A816168-9D32-4A1A-A336-6EBCCEDE2043}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A816168-9D32-4A1A-A336-6EBCCEDE2043}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A816168-9D32-4A1A-A336-6EBCCEDE2043}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A816168-9D32-4A1A-A336-6EBCCEDE2043}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44E7C375-D7FC-45AB-8A14-B52F3DC587AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44E7C375-D7FC-45AB-8A14-B52F3DC587AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44E7C375-D7FC-45AB-8A14-B52F3DC587AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44E7C375-D7FC-45AB-8A14-B52F3DC587AA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CAD90912-A769-43DB-8E05-C05FB03F8745} = {A5F65154-A864-44BB-8882-FA983066E2A1}
+		{7A816168-9D32-4A1A-A336-6EBCCEDE2043} = {A5F65154-A864-44BB-8882-FA983066E2A1}
+		{44E7C375-D7FC-45AB-8A14-B52F3DC587AA} = {63B4CE3C-0001-40D2-BB07-94E3529D0379}
+	EndGlobalSection
+EndGlobal

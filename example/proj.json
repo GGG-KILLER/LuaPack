@@ -1,0 +1,10 @@
+{
+  "preset": "Lua51",
+  "entryPoint": "main.lua",
+  "outputFile": "dist/main.lua",
+  "files": [
+    "**/*.lua",
+    "!dist/**"
+  ],
+  "cachedIncludes": true
+}
