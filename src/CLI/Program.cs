@@ -1,32 +1,47 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Collections.Immutable;
+using System.CommandLine;
 using System.Text.Json;
-using Cocona;
 using Loretta.CodeAnalysis.Text;
 using LuaPack;
 using LuaPack.Core;
 using Microsoft.Extensions.FileSystemGlobbing;
-using Microsoft.Extensions.Logging;
 
-Cocona.Builder.CoconaAppBuilder? builder = CoconaApp.CreateBuilder(args);
-
-await CoconaApp.RunAsync(MainCommand, args);
-
-static async Task<int> MainCommand(
-    CoconaAppContext ctx,
-    ILogger<Program> logger,
-    [Argument("path", Description = "The path to the json project file.")] string projectFilePath,
-    [Option("threads", new[] { 'j', 't' }, Description = "The amount of threads to use (if 0 defaults to the amount of cores in the system).")] int threads = 0)
+var threadsOption = new Option<int>(new[] { "j", "t", "threads" }, () => 0, "The amount of threads to use (if 0 defaults to the amount of cores in the system).");
+threadsOption.AddValidator((result) =>
 {
-    if (threads == 0)
+    var threads = result.GetValueForOption(threadsOption);
+    if (threads < 0)
+        result.ErrorMessage = "The number of threads must be equal to or greater than 0.";
+});
+var pathArgument = new Argument<FileInfo>("path", "The path to the json project file.")
+    .LegalFilePathsOnly()
+    .ExistingOnly();
+
+var rootCommand = new RootCommand("Process the file list according to the project specification.")
+{
+    pathArgument,
+    threadsOption
+};
+rootCommand.SetHandler(async (ctx) =>
+{
+    var path = ctx.ParseResult.GetValueForArgument(pathArgument);
+    var threads = ctx.ParseResult.GetValueForOption(threadsOption);
+    ctx.ExitCode = await MainCommand(path, threads);
+});
+await rootCommand.InvokeAsync(args);
+
+static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
+{
+    if (threads <= 0)
         threads = Environment.ProcessorCount;
 
-    projectFilePath = Path.GetFullPath(projectFilePath);
-    string? projectDir = Path.GetDirectoryName(projectFilePath)!;
+    string? projectDir = projectFileInfo.DirectoryName!;
 
-    logger.LogInformation("Loading project file...");
-    ProjectFile projectFile = await LoadProjectFile(projectFilePath) ?? throw new InvalidOperationException("Unable to load the project file.");
+    Console.WriteLine("Loading project file...");
+    ProjectFile projectFile = await LoadProjectFile(projectFileInfo) ?? throw new InvalidOperationException("Unable to load the project file.");
 
+    Console.WriteLine("Listing files to pack...");
     var matcher = new Matcher();
     matcher.AddIncludePatterns(projectFile.Files.Where(f => !f.StartsWith('!')));
     matcher.AddExcludePatterns(projectFile.Files.Where(f => f.StartsWith('!')).Select(f => f[1..]));
@@ -35,6 +50,7 @@ static async Task<int> MainCommand(
 
     var generator = new PackGenerator(projectDir, projectFile);
 
+    Console.WriteLine("Loading files...");
     if (threads == 1)
     {
         foreach (var file in files)
@@ -50,15 +66,20 @@ static async Task<int> MainCommand(
             file => AddFileToGenerator(generator, file));
     }
 
+    Console.WriteLine("Checking for errors...");
     var diagnostics = generator.GetDiagnostics().ToImmutableArray();
     if (diagnostics.Any())
     {
+        Console.WriteLine("Errors found.");
         foreach (var diagnostic in diagnostics)
         {
-            logger.LogError("{Message}", diagnostic.ToString());
+            await Console.Error.WriteLineAsync(diagnostic.ToString());
         }
+
+        return 1;
     }
 
+    Console.WriteLine("Generating output file...");
     var outputFile = new FileInfo(Path.GetFullPath(projectFile.OutputFile, projectDir));
     outputFile.Directory?.Create();
 
@@ -72,12 +93,13 @@ static async Task<int> MainCommand(
 
             foreach (var error in errors)
             {
-                logger.LogError("{Message}", error.ToString());
+                await Console.Error.WriteLineAsync(error.ToString());
             }
 
             return 1;
         }
     }
+    Console.WriteLine("Done!");
 
     return 0;
 }
@@ -90,8 +112,8 @@ static void AddFileToGenerator(PackGenerator generator, string file)
     generator.AddFile(file, text);
 }
 
-static async Task<ProjectFile?> LoadProjectFile(string path)
+static async Task<ProjectFile?> LoadProjectFile(FileInfo projectFileInfo)
 {
-    using var stream = File.OpenRead(path);
-    return await JsonSerializer.DeserializeAsync<ProjectFile>(stream, SourceGenerationContext.Default.ProjectFile);
+    using var stream = projectFileInfo.OpenRead();
+    return await JsonSerializer.DeserializeAsync(stream, SourceGenerationContext.Default.ProjectFile);
 }
