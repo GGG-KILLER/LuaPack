@@ -62,24 +62,30 @@ The project file is basically a JSON file with a few fields:
 
 ### Command Line Reference
 ```
-Usage: luapack [--threads <Int32>] [--help] [--version] path
+Description:
+  Process the file list according to the project specification.
 
-luapack
+Usage:
+  luapack <path> [options]
 
 Arguments:
-  0: path    The path to the json project file. (Required)
+  <path>  The path to the json project file.
 
 Options:
-  -j, -t, --threads <Int32>    The amount of threads to use (if 0 defaults to the amount of cores in the system). (Default: 0)
-  -h, --help                   Show help message
-  --version                    Show version
+  -j, -t, --threads <threads>  The amount of threads to use (if 0 defaults to the amount of cores in the system). [default: 0]
+  --version                    Show version information
+  -?, -h, --help               Show help and usage information
 ```
 
 #### Example
 ```console
-$ luapack sample/proj.json
-info: Program[0]
-      Loading project file...
+$ luapack example/proj.json
+Loading project file...
+Listing files to pack...
+Loading files...
+Checking for errors...
+Generating output file...
+Done!
 ```
 
 ## Example Project
