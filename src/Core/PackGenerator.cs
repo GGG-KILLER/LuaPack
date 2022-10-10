@@ -10,7 +10,7 @@ namespace LuaPack.Core;
 public sealed class PackGenerator : IDisposable
 {
     private readonly ReaderWriterLockSlim _includedFilesLock = new();
-    private readonly List<FileIncludeResult> _includedFiles = new();
+    private readonly SortedList<string, FileIncludeResult> _includedFiles = new(StringComparer.Ordinal);
     private readonly string _projectRoot;
     private readonly LuaParseOptions _parseOptions;
     private readonly string _entryPoint;
@@ -36,7 +36,7 @@ public sealed class PackGenerator : IDisposable
         _includedFilesLock.EnterReadLock();
         try
         {
-            foreach (var file in _includedFiles)
+            foreach (var (_, file) in _includedFiles)
             {
                 foreach (var diagnostic in file.RewrittenTree.GetDiagnostics())
                 {
@@ -79,7 +79,7 @@ public sealed class PackGenerator : IDisposable
         _includedFilesLock.EnterWriteLock();
         try
         {
-            _includedFiles.Add(result);
+            _includedFiles.Add(result.Path, result);
         }
         finally
         {
@@ -100,7 +100,7 @@ public sealed class PackGenerator : IDisposable
 
         try
         {
-            return file.References.ExceptBy(_includedFiles.Select(x => x.Path), x => x.Path)
+            return file.References.ExceptBy(_includedFiles.Select(x => x.Value.Path), x => x.Path)
                                   .ToImmutableArray();
         }
         finally
@@ -119,7 +119,7 @@ public sealed class PackGenerator : IDisposable
         _includedFilesLock.EnterReadLock();
         try
         {
-            foreach (var file in _includedFiles)
+            foreach (var (_, file) in _includedFiles)
             {
                 diagnostics.AddRange(file.Diagnostics);
                 var unresolvedImports = ListUnresolvedImports(file);
@@ -154,7 +154,8 @@ public sealed class PackGenerator : IDisposable
             }
 
             var entryPointFile = _includedFiles.SingleOrDefault(
-                file => file.Path.Equals(entryPointPath, StringComparison.Ordinal));
+                file => file.Value.Path.Equals(entryPointPath, StringComparison.Ordinal))
+                .Value;
             if (entryPointFile is null)
             {
                 diagnostics.Add(Diagnostic.Create(
