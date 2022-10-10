@@ -7,7 +7,7 @@ using LuaPack;
 using LuaPack.Core;
 using Microsoft.Extensions.FileSystemGlobbing;
 
-var threadsOption = new Option<int>(new[] { "j", "t", "threads" }, () => 0, "The amount of threads to use (if 0 defaults to the amount of cores in the system).");
+var threadsOption = new Option<int>(new[] { "-j", "-t", "--threads" }, () => 0, "The amount of threads to use (if 0 defaults to the amount of cores in the system).");
 threadsOption.AddValidator((result) =>
 {
     var threads = result.GetValueForOption(threadsOption);
