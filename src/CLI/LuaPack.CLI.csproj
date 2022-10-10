@@ -8,7 +8,18 @@
     <AssemblyName>luapack</AssemblyName>
 
     <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CompilationMode)' != 'aot'">
     <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CompilationMode)' == 'aot'">
+    <PublishAot>true</PublishAot>
+    <IlcTrimMetadata>true</IlcTrimMetadata>
+    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
   </PropertyGroup>
 
   <ItemGroup>
