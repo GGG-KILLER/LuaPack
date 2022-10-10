@@ -12,12 +12,23 @@ public sealed class PackGenerator : IDisposable
     private readonly ReaderWriterLockSlim _includedFilesLock = new();
     private readonly List<FileIncludeResult> _includedFiles = new();
     private readonly string _projectRoot;
-    private readonly ProjectFile _projectFile;
+    private readonly LuaParseOptions _parseOptions;
+    private readonly string _entryPoint;
+    private readonly bool _cacheIncludes;
 
-    public PackGenerator(string projectRoot, ProjectFile projectFile)
+    public PackGenerator(
+        string projectRoot,
+        LuaParseOptions parseOptions,
+        string entryPoint,
+        bool cacheIncludes)
     {
+        if (string.IsNullOrWhiteSpace(projectRoot)) throw new ArgumentException($"'{nameof(projectRoot)}' cannot be null or whitespace.", nameof(projectRoot));
+        if (string.IsNullOrWhiteSpace(entryPoint)) throw new ArgumentException($"'{nameof(entryPoint)}' cannot be null or whitespace.", nameof(entryPoint));
+
         _projectRoot = projectRoot;
-        _projectFile = projectFile;
+        _parseOptions = parseOptions ?? throw new ArgumentNullException(nameof(parseOptions));
+        _entryPoint = entryPoint;
+        _cacheIncludes = cacheIncludes;
     }
 
     public IEnumerable<Diagnostic> GetDiagnostics()
@@ -46,7 +57,7 @@ public sealed class PackGenerator : IDisposable
 
     public Result<Unit, ImmutableArray<Diagnostic>> AddFile(string path, SourceText sourceText)
     {
-        var tree = LuaSyntaxTree.ParseText(sourceText, _projectFile.GetParseOptions(), path);
+        var tree = LuaSyntaxTree.ParseText(sourceText, _parseOptions, path);
 
         var treeDiags = tree.GetDiagnostics();
         if (treeDiags.Any())
@@ -61,7 +72,7 @@ public sealed class PackGenerator : IDisposable
         var relativePath = Helpers.MakePathRelativeToRoot(_projectRoot, path);
         var result = new FileIncludeResult(
             relativePath,
-            tree.WithRootAndOptions(rewrittenRoot, _projectFile.GetParseOptions()),
+            tree.WithRootAndOptions(rewrittenRoot, _parseOptions),
             imports,
             diagnostics);
 
@@ -103,7 +114,7 @@ public sealed class PackGenerator : IDisposable
     {
         var statements = new List<StatementSyntax>();
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        statements.AddRange(_projectFile.CachedIncludes ? SyntaxConstants.CachingHeader : SyntaxConstants.NonCachingHeader);
+        statements.AddRange(_cacheIncludes ? SyntaxConstants.CachingHeader : SyntaxConstants.NonCachingHeader);
 
         _includedFilesLock.EnterReadLock();
         try
@@ -123,7 +134,7 @@ public sealed class PackGenerator : IDisposable
                 statements.Add(SyntaxFactory.AssignmentStatement(
                     SyntaxFactory.SingletonSeparatedList<PrefixExpressionSyntax>(
                         SyntaxFactory.ElementAccessExpression(
-                            SyntaxConstants.ImportFileTableNameSyntax,
+                            SyntaxFactory.IdentifierName(SyntaxConstants.ImportFileTableName),
                             SyntaxFactoryEx.StringExpression(file.Path))),
                     SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(
                         SyntaxFactory.AnonymousFunctionExpression(
@@ -133,13 +144,13 @@ public sealed class PackGenerator : IDisposable
                             file.RewrittenTree.GetCompilationUnitRoot().Statements))));
             }
 
-            var entryPointPath = Helpers.MakePathRelativeToRoot(_projectRoot, Path.GetFullPath(_projectFile.EntryPoint, _projectRoot));
+            var entryPointPath = Helpers.MakePathRelativeToRoot(_projectRoot, Path.GetFullPath(_entryPoint, _projectRoot));
             if (entryPointPath.StartsWith("..", StringComparison.Ordinal))
             {
                 diagnostics.Add(Diagnostic.Create(
                     Diagnostics.EntryPointOutOfWorkspace,
                     Location.None,
-                    _projectFile.EntryPoint));
+                    _entryPoint));
             }
 
             var entryPointFile = _includedFiles.SingleOrDefault(
@@ -149,7 +160,7 @@ public sealed class PackGenerator : IDisposable
                 diagnostics.Add(Diagnostic.Create(
                     Diagnostics.UnresolvedEntryPoint,
                     Location.None,
-                    _projectFile.EntryPoint));
+                    _entryPoint));
             }
 
             statements.Add(SyntaxFactory.ExpressionStatement(

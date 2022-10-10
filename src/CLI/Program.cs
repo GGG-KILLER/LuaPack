@@ -1,11 +1,13 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Collections.Immutable;
 using System.CommandLine;
+using System.Diagnostics;
 using System.Text.Json;
 using Loretta.CodeAnalysis.Text;
 using LuaPack;
 using LuaPack.Core;
 using Microsoft.Extensions.FileSystemGlobbing;
+using Tsu.Numerics;
 
 var threadsOption = new Option<int>(new[] { "-j", "-t", "--threads" }, () => 0, "The amount of threads to use (if 0 defaults to the amount of cores in the system).");
 threadsOption.AddValidator((result) =>
@@ -33,10 +35,12 @@ await rootCommand.InvokeAsync(args);
 
 static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
 {
+    var sw = Stopwatch.StartNew();
+
     if (threads <= 0)
         threads = Environment.ProcessorCount;
 
-    string? projectDir = projectFileInfo.DirectoryName!;
+    string? projectRoot = projectFileInfo.DirectoryName!;
 
     Console.WriteLine("Loading project file...");
     ProjectFile projectFile = await LoadProjectFile(projectFileInfo) ?? throw new InvalidOperationException("Unable to load the project file.");
@@ -46,9 +50,13 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
     matcher.AddIncludePatterns(projectFile.Files.Where(f => !f.StartsWith('!')));
     matcher.AddExcludePatterns(projectFile.Files.Where(f => f.StartsWith('!')).Select(f => f[1..]));
     matcher.AddExclude(projectFile.OutputFile);
-    IEnumerable<string> files = matcher.GetResultsInFullPath(projectDir);
+    IEnumerable<string> files = matcher.GetResultsInFullPath(projectRoot);
 
-    var generator = new PackGenerator(projectDir, projectFile);
+    var generator = new PackGenerator(
+        projectRoot,
+        projectFile.GetParseOptions(),
+        projectFile.EntryPoint,
+        projectFile.CachedIncludes);
 
     Console.WriteLine("Loading files...");
     if (threads == 1)
@@ -80,7 +88,7 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
     }
 
     Console.WriteLine("Generating output file...");
-    var outputFile = new FileInfo(Path.GetFullPath(projectFile.OutputFile, projectDir));
+    var outputFile = new FileInfo(Path.GetFullPath(projectFile.OutputFile, projectRoot));
     outputFile.Directory?.Create();
 
     using (var stream = outputFile.OpenWrite())
@@ -99,7 +107,11 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
             return 1;
         }
     }
-    Console.WriteLine("Done!");
+
+    sw.Stop();
+    var delta = sw.Elapsed.Ticks; // ElapsedTicks returns the raw, os-specific number of ticks.
+
+    Console.WriteLine($"Done in {Duration.Format(delta)}!");
 
     return 0;
 }

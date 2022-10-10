@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Loretta.CodeAnalysis.Lua;
 
-namespace LuaPack.Core;
+namespace LuaPack;
 
 public class NullableLuaSyntaxOptions
 {
