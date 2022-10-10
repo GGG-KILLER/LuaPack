@@ -41,10 +41,7 @@ internal class ImportRewriter : LuaSyntaxRewriter
                     SyntaxConstants.ImportFunctionNameSyntax
                         .WithLeadingTrivia(node.Expression.GetLeadingTrivia())
                         .WithTrailingTrivia(SyntaxFactory.Space),
-                    SyntaxFactory.StringFunctionArgument(
-                        SyntaxFactory.LiteralExpression(
-                            SyntaxKind.StringLiteralExpression,
-                            SyntaxFactory.Literal(resolvedPath)))
+                    SyntaxFactoryEx.StringArgument(resolvedPath)
                         .WithTriviaFrom(node.Argument));
             }
         }

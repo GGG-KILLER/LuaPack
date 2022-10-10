@@ -9,8 +9,7 @@ internal static class SyntaxConstants
     public const string ImportFunctionName = "__packer_import",
                         ImportFileTableName = "__packer_import_file_funcs";
 
-    public static readonly IdentifierNameSyntax ImportFunctionNameSyntax = SyntaxFactory.IdentifierName(ImportFunctionName),
-                                                ImportFileTableNameSyntax = SyntaxFactory.IdentifierName(ImportFileTableName);
+    public static readonly IdentifierNameSyntax ImportFunctionNameSyntax = SyntaxFactory.IdentifierName(ImportFunctionName);
 
     public static readonly ImmutableArray<StatementSyntax> NonCachingHeader = ImmutableArray.Create(
         SyntaxFactory.ParseStatement(
