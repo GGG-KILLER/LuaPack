@@ -103,7 +103,7 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads, bool q
     var outputFile = new FileInfo(Path.GetFullPath(projectFile.OutputFile, projectRoot));
     outputFile.Directory?.Create();
 
-    using (var stream = outputFile.OpenWrite())
+    using (var stream = outputFile.Open(FileMode.Create))
     using (var writer = new StreamWriter(stream))
     {
         var result = generator.WriteOutput(writer);

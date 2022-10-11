@@ -38,7 +38,4 @@ __packer_import_file_funcs["main.lua"] = function(...)
     local x = __packer_import "dep1.lua"
     print(x.a + x.b,y.a + y.b,z.a + z.b)
 end
-__packer_import "main.lua"ep1.lua"
-    print(x.a + x.b,y.a + y.b,z.a + z.b)
-end
-__packer_import "example/main.lua"
+__packer_import "main.lua"
