@@ -59,20 +59,29 @@ public sealed class PackGenerator : IDisposable
     {
         var tree = LuaSyntaxTree.ParseText(sourceText, _parseOptions, path);
 
+        ImmutableArray<Import> imports;
+        ImmutableArray<Diagnostic> diagnostics;
         var treeDiags = tree.GetDiagnostics();
-        if (treeDiags.Any())
-            return Result.Err<Unit, ImmutableArray<Diagnostic>>(treeDiags.ToImmutableArray());
+        if (!treeDiags.Any())
+        {
+            var rewrittenRoot = ImportRewriter.Rewrite(
+                _projectRoot,
+                tree,
+                out imports,
+                out diagnostics);
 
-        var rewrittenRoot = ImportRewriter.Rewrite(
-            _projectRoot,
-            tree,
-            out var imports,
-            out var diagnostics);
+            tree = tree.WithRootAndOptions(rewrittenRoot, _parseOptions);
+        }
+        else
+        {
+            imports = ImmutableArray<Import>.Empty;
+            diagnostics = ImmutableArray<Diagnostic>.Empty;
+        }
 
         var relativePath = Helpers.MakePathRelativeToRoot(_projectRoot, path);
         var result = new FileIncludeResult(
             relativePath,
-            tree.WithRootAndOptions(rewrittenRoot, _parseOptions),
+            tree,
             imports,
             diagnostics);
 
@@ -85,6 +94,8 @@ public sealed class PackGenerator : IDisposable
         {
             _includedFilesLock.ExitWriteLock();
         }
+
+        diagnostics = diagnostics.InsertRange(0, tree.GetDiagnostics());
 
         if (diagnostics.Any())
             return Result.Err<Unit, ImmutableArray<Diagnostic>>(diagnostics);
