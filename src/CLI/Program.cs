@@ -45,7 +45,7 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads, bool q
     if (threads <= 0)
         threads = Environment.ProcessorCount;
 
-    string? projectRoot = projectFileInfo.DirectoryName!;
+    string? projectRoot = projectFileInfo.DirectoryName! + Path.DirectorySeparatorChar;
 
     if (!quiet)
         await Console.Out.WriteLineAsync("Loading project file...");
