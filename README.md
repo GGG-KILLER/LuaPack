@@ -3,8 +3,8 @@
 This project basically bundles a bunch of Lua files into a single one. Currently, it only recognizes `dofile`, but there are plans to support `require` in the future.
 
 This tool is **alpha quality**. The following things are missing:
-- [ ] Proper logging (report progress on processing and don't use `Microsoft.Extensions.Logging` as its output isn't very user friendly);
-- [ ] Better diagnostic (errors, warnings, etc.) logging for errors in files;
+- [ ] Proper logging (report progress on processing);
+- [x] Better diagnostic (errors, warnings, etc.) logging for errors in files;
 - [ ] More error checking (check if project file exists, etc.);
 - [ ] CI/CD flow to create new releases every commit.
 
@@ -73,11 +73,13 @@ Arguments:
 
 Options:
   -j, -t, --threads <threads>  The amount of threads to use (if 0 defaults to the amount of cores in the system). [default: 0]
+  -q, -s, --quiet, --silent    Whether no console output should be emitted apart from errors in stderr (and errors will be emitted in short form, without highlighting it in the code).
+                               [default: False]
   --version                    Show version information
   -?, -h, --help               Show help and usage information
 ```
 
-#### Example
+#### Success Example
 ```console
 $ luapack example/proj.json
 Loading project file...
@@ -85,7 +87,26 @@ Listing files to pack...
 Loading files...
 Checking for errors...
 Generating output file...
-Done!
+Done in 169.42ms!
+```
+
+#### Error Example
+```console
+$ luapack example/proj.json
+Loading project file...
+Listing files to pack...
+Loading files...
+Checking for errors...
+Generating output file...
+Errors found:
+
+main.lua(0,10):
+error PACK0002: Could not find the specified file inside the workspace
+  |
+1 | local z = dofile "dep4.lua"
+  |           ^^^^^^^^^^^^^^^^^
+2 | local y = dofile "dep2.lua"
+3 | local x = dofile "dep1.lua"
 ```
 
 ## Example Project
