@@ -7,6 +7,11 @@ on:
         required: true
         description: The version to use when creating the release
         type: string
+      prerelease:
+        required: true
+        description: Whether this release is a preview
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -98,7 +103,7 @@ jobs:
         with:
           name: v${{ inputs.version }}
           tag_name: v${{ inputs.version }}
-          prerelease: true
+          prerelease: ${{ inputs.prerelease }}
           files: |
             artifacts/*.zip
             artifacts/*.tar.gz
