@@ -111,7 +111,7 @@ public sealed class PackGenerator : IDisposable
 
         try
         {
-            return file.References.ExceptBy(_includedFiles.Select(x => x.Value.Path), x => x.Path)
+            return file.References.Where(f => !_includedFiles.ContainsKey(f.Path))
                                   .ToImmutableArray();
         }
         finally
