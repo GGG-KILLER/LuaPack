@@ -2,7 +2,9 @@
 using System.Collections.Immutable;
 using System.CommandLine;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
+using Loretta.CodeAnalysis;
 using Loretta.CodeAnalysis.Text;
 using LuaPack;
 using LuaPack.Core;
@@ -16,6 +18,7 @@ threadsOption.AddValidator((result) =>
     if (threads < 0)
         result.ErrorMessage = "The number of threads must be equal to or greater than 0.";
 });
+var quietOption = new Option<bool>(new[] { "-q", "-s", "--quiet", "--silent" }, () => false, "Whether no console output should be emitted apart from errors in stderr (and errors will be emitted in short form, without highlighting it in the code).");
 var pathArgument = new Argument<FileInfo>("path", "The path to the json project file.")
     .LegalFilePathsOnly()
     .ExistingOnly();
@@ -23,17 +26,19 @@ var pathArgument = new Argument<FileInfo>("path", "The path to the json project 
 var rootCommand = new RootCommand("Process the file list according to the project specification.")
 {
     pathArgument,
-    threadsOption
+    threadsOption,
+    quietOption
 };
 rootCommand.SetHandler(async (ctx) =>
 {
     var path = ctx.ParseResult.GetValueForArgument(pathArgument);
     var threads = ctx.ParseResult.GetValueForOption(threadsOption);
-    ctx.ExitCode = await MainCommand(path, threads);
+    var quiet = ctx.ParseResult.GetValueForOption(quietOption);
+    ctx.ExitCode = await MainCommand(path, threads, quiet);
 });
 await rootCommand.InvokeAsync(args);
 
-static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
+static async Task<int> MainCommand(FileInfo projectFileInfo, int threads, bool quiet)
 {
     var sw = Stopwatch.StartNew();
 
@@ -42,10 +47,13 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
 
     string? projectRoot = projectFileInfo.DirectoryName!;
 
-    Console.WriteLine("Loading project file...");
+    if (!quiet)
+        await Console.Out.WriteLineAsync("Loading project file...");
+
     ProjectFile projectFile = await LoadProjectFile(projectFileInfo) ?? throw new InvalidOperationException("Unable to load the project file.");
 
-    Console.WriteLine("Listing files to pack...");
+    if (!quiet)
+        await Console.Out.WriteLineAsync("Listing files to pack...");
     var matcher = new Matcher();
     matcher.AddIncludePatterns(projectFile.Files.Where(f => !f.StartsWith('!')));
     matcher.AddExcludePatterns(projectFile.Files.Where(f => f.StartsWith('!')).Select(f => f[1..]));
@@ -58,7 +66,8 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
         projectFile.EntryPoint,
         projectFile.CachedIncludes);
 
-    Console.WriteLine("Loading files...");
+    if (!quiet)
+        await Console.Out.WriteLineAsync("Loading files...");
     if (threads == 1)
     {
         foreach (var file in files)
@@ -74,20 +83,23 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
             file => AddFileToGenerator(generator, file));
     }
 
-    Console.WriteLine("Checking for errors...");
+    if (!quiet)
+        await Console.Out.WriteLineAsync("Checking for errors...");
     var diagnostics = generator.GetDiagnostics().ToImmutableArray();
     if (diagnostics.Any())
     {
-        Console.WriteLine("Errors found.");
+        await Console.Error.WriteLineAsync("Errors found:");
+        await Console.Error.WriteLineAsync();
         foreach (var diagnostic in diagnostics)
         {
-            await Console.Error.WriteLineAsync(diagnostic.ToString());
+            await WriteDiagnostic(projectRoot, diagnostic, quiet);
         }
 
         return 1;
     }
 
-    Console.WriteLine("Generating output file...");
+    if (!quiet)
+        await Console.Out.WriteLineAsync("Generating output file...");
     var outputFile = new FileInfo(Path.GetFullPath(projectFile.OutputFile, projectRoot));
     outputFile.Directory?.Create();
 
@@ -99,9 +111,11 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
         {
             var errors = result.Err.Value;
 
+            await Console.Error.WriteLineAsync("Errors found:");
+            await Console.Error.WriteLineAsync();
             foreach (var error in errors)
             {
-                await Console.Error.WriteLineAsync(error.ToString());
+                await WriteDiagnostic(projectRoot, error, quiet);
             }
 
             return 1;
@@ -111,9 +125,21 @@ static async Task<int> MainCommand(FileInfo projectFileInfo, int threads)
     sw.Stop();
     var delta = sw.Elapsed.Ticks; // ElapsedTicks returns the raw, os-specific number of ticks.
 
-    Console.WriteLine($"Done in {Duration.Format(delta)}!");
+    await Console.Out.WriteLineAsync($"Done in {Duration.Format(delta)}!");
 
     return 0;
+}
+
+static async Task WriteDiagnostic(string root, Diagnostic diagnostic, bool simplified)
+{
+    if (simplified || diagnostic.Location.Kind != LocationKind.SourceFile)
+    {
+        await Console.Error.WriteLineAsync(diagnostic.ToString());
+    }
+    else
+    {
+        await DiagnosticWriter.WriteDiagnostic(Console.Error, root, diagnostic);
+    }
 }
 
 static void AddFileToGenerator(PackGenerator generator, string file)
