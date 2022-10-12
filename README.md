@@ -2,7 +2,7 @@
 
 This project basically bundles a bunch of Lua files into a single one. Currently, it only recognizes `dofile`, but there are plans to support `require` in the future.
 
-This tool is **alpha quality**. The following things are missing:
+This tool is **beta quality**. The following things are missing:
 - [ ] Proper logging (report progress on processing);
 - [x] Better diagnostic (errors, warnings, etc.) logging for errors in files;
 - [ ] More error checking (check if project file exists, etc.);
